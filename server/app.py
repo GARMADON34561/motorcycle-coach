@@ -1,7 +1,7 @@
 import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
-import uuid
+from typing import Tuple
 
 # ----- Models -----
 class MotorcycleAction(BaseModel):
@@ -21,79 +21,55 @@ class MotorcycleObservation(BaseModel):
     done: bool = False
     reward: float = 0.0
 
-# ----- Environment -----
+# ----- Environment with three explicit graders -----
 class MotorcycleEnvironment:
     def __init__(self):
-        self.tasks = [
-            {"type": "corner", "initial_speed": 40.0, "turn_radius": 15.0, "road_condition": "dry", "max_safe_lean": 35.0},
-            {"type": "emergency", "initial_speed": 60.0, "obstacle_distance": 20.0, "road_condition": "wet"},
-            {"type": "cruise", "distance_km": 5.0, "traffic_density": 0.5, "road_condition": "dry"}
-        ]
-        self.current_task = 0
+        self.task_index = 0  # 0,1,2
         self.total_reward = 0.0
-        self.step_count = 0
 
     def reset(self):
-        self.current_task = 0
+        self.task_index = 0
         self.total_reward = 0.0
-        self.step_count = 0
         return self._get_obs()
 
     def _get_obs(self):
-        task = self.tasks[self.current_task]
-        if task["type"] == "corner":
+        # Return observation based on current task
+        if self.task_index == 0:  # cornering
             return MotorcycleObservation(
-                speed_kmh=task["initial_speed"], lean_angle=0.0, distance_to_obstacle_m=999.0,
-                fuel_level_l=5.0, road_condition=task["road_condition"], turn_radius_m=task["turn_radius"],
+                speed_kmh=40.0, lean_angle=0.0, distance_to_obstacle_m=999.0,
+                fuel_level_l=5.0, road_condition="dry", turn_radius_m=15.0,
                 headway_seconds=999.0, done=False, reward=0.0
             )
-        elif task["type"] == "emergency":
+        elif self.task_index == 1:  # emergency
             return MotorcycleObservation(
-                speed_kmh=task["initial_speed"], lean_angle=0.0, distance_to_obstacle_m=task["obstacle_distance"],
-                fuel_level_l=5.0, road_condition=task["road_condition"], turn_radius_m=999.0,
+                speed_kmh=60.0, lean_angle=0.0, distance_to_obstacle_m=20.0,
+                fuel_level_l=5.0, road_condition="wet", turn_radius_m=999.0,
                 headway_seconds=999.0, done=False, reward=0.0
             )
-        else:
+        else:  # cruise
             return MotorcycleObservation(
-                speed_kmh=50.0, lean_angle=0.0, distance_to_obstacle_m=999.0, fuel_level_l=10.0,
-                road_condition=task["road_condition"], turn_radius_m=999.0, headway_seconds=2.0,
-                done=False, reward=0.0
+                speed_kmh=50.0, lean_angle=0.0, distance_to_obstacle_m=999.0,
+                fuel_level_l=10.0, road_condition="dry", turn_radius_m=999.0,
+                headway_seconds=2.0, done=False, reward=0.0
             )
 
     def step(self, action: MotorcycleAction):
-        task = self.tasks[self.current_task]
-        reward = 0.0
+        # Grade the current task and move to next
+        if self.task_index == 0:
+            reward = self._grader_cornering(action)
+        elif self.task_index == 1:
+            reward = self._grader_emergency(action)
+        else:
+            reward = self._grader_cruise(action)
 
-        if task["type"] == "corner":
-            ideal_lean = min(35.0, (action.throttle * 40)**2 / (task["turn_radius"] * 9.8) * 10)
-            lean_error = abs(action.lean_angle - ideal_lean) / task["max_safe_lean"]
-            raw = 1.0 - min(1.0, lean_error)
-            reward = max(0.01, min(0.99, raw))
-
-        elif task["type"] == "emergency":
-            stopping_distance = (action.brake * 15) + (abs(action.steering) * 5)
-            if stopping_distance >= task["obstacle_distance"]:
-                reward = 0.01
-            else:
-                smoothness = 1.0 - abs(action.steering) * 0.5
-                raw = 0.5 + smoothness * 0.4
-                reward = max(0.01, min(0.99, raw))
-
-        else:  # cruise
-            fuel_used = action.throttle * 0.5
-            headway_safety = min(1.0, max(0.0, (action.brake * 2 + 1) / 3))
-            raw = (1 - fuel_used/5) * 0.5 + headway_safety * 0.5
-            reward = max(0.01, min(0.99, raw))
-
-        # --- CRITICAL: Ensure reward is NEVER 0.0 or 1.0 ---
+        # Clamp reward strictly between 0 and 1
         reward = max(0.01, min(0.99, reward))
-
         self.total_reward += reward
-        self.current_task += 1
-        done = self.current_task >= len(self.tasks)
+        self.task_index += 1
+        done = self.task_index >= 3
 
         if done:
-            final_reward = self.total_reward / len(self.tasks)
+            final_reward = self.total_reward / 3.0
             final_reward = max(0.01, min(0.99, final_reward))
             obs = MotorcycleObservation(
                 speed_kmh=0, lean_angle=0, distance_to_obstacle_m=0, fuel_level_l=0,
@@ -103,8 +79,28 @@ class MotorcycleEnvironment:
             obs = self._get_obs()
             obs.reward = reward
             obs.done = False
-
         return obs
+
+    def _grader_cornering(self, action: MotorcycleAction) -> float:
+        # Ideal lean angle for 40 km/h, radius 15m
+        ideal_lean = min(35.0, (action.throttle * 40)**2 / (15.0 * 9.8) * 10)
+        lean_error = abs(action.lean_angle - ideal_lean) / 35.0
+        score = 1.0 - min(1.0, lean_error)
+        return max(0.01, min(0.99, score))
+
+    def _grader_emergency(self, action: MotorcycleAction) -> float:
+        stopping_distance = (action.brake * 15) + (abs(action.steering) * 5)
+        if stopping_distance >= 20.0:
+            return 0.01  # crash
+        smoothness = 1.0 - abs(action.steering) * 0.5
+        score = 0.5 + smoothness * 0.4
+        return max(0.01, min(0.99, score))
+
+    def _grader_cruise(self, action: MotorcycleAction) -> float:
+        fuel_used = action.throttle * 0.5
+        headway_safety = min(1.0, max(0.0, (action.brake * 2 + 1) / 3))
+        score = (1 - fuel_used/5) * 0.5 + headway_safety * 0.5
+        return max(0.01, min(0.99, score))
 
 # ----- FastAPI -----
 app = FastAPI()

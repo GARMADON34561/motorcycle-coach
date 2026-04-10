@@ -1,12 +1,10 @@
 import uvicorn
 from fastapi import FastAPI
-from pydantic import Field
+from pydantic import BaseModel, Field
 from typing import List, Dict, Any
 import uuid
 
-# ---------- Models ----------
-from pydantic import BaseModel
-
+# ----- Models -----
 class MotorcycleAction(BaseModel):
     throttle: float = Field(ge=0, le=1)
     brake: float = Field(ge=0, le=1)
@@ -24,7 +22,7 @@ class MotorcycleObservation(BaseModel):
     done: bool = False
     reward: float = 0.0
 
-# ---------- Environment ----------
+# ----- Environment -----
 class MotorcycleEnvironment:
     def __init__(self):
         self.tasks = [
@@ -101,7 +99,7 @@ class MotorcycleEnvironment:
             obs.done = False
         return obs
 
-# ---------- FastAPI ----------
+# ----- FastAPI -----
 app = FastAPI()
 env = MotorcycleEnvironment()
 
@@ -117,7 +115,10 @@ def step(action: MotorcycleAction):
 
 @app.get("/")
 def root():
-    return {"status": "ready", "message": "Motorcycle AR Coach is running"}
+    return {"status": "ready"}
+
+def main():
+    uvicorn.run(app, host="0.0.0.0", port=7860)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+    main()

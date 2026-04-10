@@ -1,7 +1,6 @@
 import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any
 import uuid
 
 # ----- Models -----
@@ -64,11 +63,13 @@ class MotorcycleEnvironment:
     def step(self, action: MotorcycleAction):
         task = self.tasks[self.current_task]
         reward = 0.0
+
         if task["type"] == "corner":
             ideal_lean = min(35.0, (action.throttle * 40)**2 / (task["turn_radius"] * 9.8) * 10)
             lean_error = abs(action.lean_angle - ideal_lean) / task["max_safe_lean"]
             raw = 1.0 - min(1.0, lean_error)
             reward = max(0.01, min(0.99, raw))
+
         elif task["type"] == "emergency":
             stopping_distance = (action.brake * 15) + (abs(action.steering) * 5)
             if stopping_distance >= task["obstacle_distance"]:
@@ -77,15 +78,20 @@ class MotorcycleEnvironment:
                 smoothness = 1.0 - abs(action.steering) * 0.5
                 raw = 0.5 + smoothness * 0.4
                 reward = max(0.01, min(0.99, raw))
-        else:
+
+        else:  # cruise
             fuel_used = action.throttle * 0.5
             headway_safety = min(1.0, max(0.0, (action.brake * 2 + 1) / 3))
             raw = (1 - fuel_used/5) * 0.5 + headway_safety * 0.5
             reward = max(0.01, min(0.99, raw))
 
+        # --- CRITICAL: Ensure reward is NEVER 0.0 or 1.0 ---
+        reward = max(0.01, min(0.99, reward))
+
         self.total_reward += reward
         self.current_task += 1
         done = self.current_task >= len(self.tasks)
+
         if done:
             final_reward = self.total_reward / len(self.tasks)
             final_reward = max(0.01, min(0.99, final_reward))
@@ -97,6 +103,7 @@ class MotorcycleEnvironment:
             obs = self._get_obs()
             obs.reward = reward
             obs.done = False
+
         return obs
 
 # ----- FastAPI -----

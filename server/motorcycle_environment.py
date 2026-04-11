@@ -2,6 +2,7 @@ from uuid import uuid4
 from typing import Optional
 from openenv.core.env_server.interfaces import Environment
 from models import MotorcycleAction, MotorcycleObservation, MotorcycleState
+from .tasks import ALL_TASKS
 
 class MotorcycleEnvironment(Environment[MotorcycleAction, MotorcycleObservation, MotorcycleState]):
     def __init__(self):
@@ -53,3 +54,7 @@ class MotorcycleEnvironment(Environment[MotorcycleAction, MotorcycleObservation,
             "emergency_braking",
             "fuel_efficiency_and_safety"
         ]
+        
+    @property
+    def tasks(self):
+        return ALL_TASKS

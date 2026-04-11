@@ -45,3 +45,11 @@ class MotorcycleEnvironment(Environment[MotorcycleAction, MotorcycleObservation,
     @property
     def state(self):
         return self._state
+    
+    @property
+    def tasks(self):
+        return [
+            "smooth_cornering",
+            "emergency_braking",
+            "fuel_efficiency_and_safety"
+        ]

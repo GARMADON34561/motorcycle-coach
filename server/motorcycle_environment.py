@@ -8,7 +8,6 @@ from models import MotorcycleAction, MotorcycleObservation, MotorcycleState
 from .tasks import ALL_TASKS
 
 class MotorcycleEnvironment(Environment[MotorcycleAction, MotorcycleObservation, MotorcycleState]):
-    # Class variable for tasks, as done in OpenEnv examples
     tasks = ALL_TASKS
 
     def __init__(self):
@@ -20,7 +19,6 @@ class MotorcycleEnvironment(Environment[MotorcycleAction, MotorcycleObservation,
         )
 
     def get_tasks(self) -> List[Dict[str, Any]]:
-        """Return the list of tasks with graders."""
         return self.tasks
 
     def reset(self, seed: Optional[int] = None, episode_id: Optional[str] = None, **kwargs):
@@ -34,7 +32,7 @@ class MotorcycleEnvironment(Environment[MotorcycleAction, MotorcycleObservation,
 
     def step(self, action: MotorcycleAction, **kwargs):
         task = self.tasks[self._state.current_task_index]
-        reward = task["grader"](action)
+        reward = task["reward_function"](action)   # <-- CHANGED KEY
 
         self._state.total_reward += reward
         self._state.step_count += 1

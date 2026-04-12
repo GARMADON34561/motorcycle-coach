@@ -1,12 +1,15 @@
-import uvicorn
-from openenv.core.env_server import create_app
-from models import MotorcycleAction, MotorcycleObservation   # absolute import
-from .motorcycle_environment import MotorcycleEnvironment
+import os
+from fastapi import FastAPI
+from openenv.core.env_server.fastapi_env_server import FastAPIEnvServer
+from server.motorcycle_environment import MotorcycleEnvironment
 
-app = create_app(MotorcycleEnvironment, MotorcycleAction, MotorcycleObservation, env_name="motorcycle_coach")
+app = FastAPI()
 
-def main():
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+# Create and mount OpenEnv server
+env_server = FastAPIEnvServer(MotorcycleEnvironment)
+app.mount("/v1", env_server.app)
 
-if __name__ == "__main__":
-    main()
+# Add a simple root health endpoint
+@app.get("/")
+async def health():
+    return {"status": "running", "environment": "motorcycle-coach"}

@@ -1,3 +1,4 @@
+sdk: docker
 name: motorcycle_coach
 version: 0.1.0
-description: AR Motorcycle Coach
+description: AR Motorcycle Coach – real‑time hazard avoidance

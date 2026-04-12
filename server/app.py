@@ -1,7 +1,7 @@
 import uvicorn
 from openenv.core.env_server import create_app
-from models import MotorcycleAction, MotorcycleObservation
-from server.motorcycle_environment import MotorcycleEnvironment
+from ..models import MotorcycleAction, MotorcycleObservation
+from .motorcycle_environment import MotorcycleEnvironment
 
 app = create_app(MotorcycleEnvironment, MotorcycleAction, MotorcycleObservation, env_name="motorcycle_coach")
 

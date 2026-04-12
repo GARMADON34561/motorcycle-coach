@@ -6,20 +6,20 @@ from models import MotorcycleAction
 def grader_task1(action: MotorcycleAction) -> float:
     """Task 1: Lean left to avoid obstacle on right."""
     if action.steering < 0 and action.throttle > 0.2:
-        return 1.0
-    return 0.0
+        return 0.8   # Good, but not perfect
+    return 0.2       # Not correct, but not zero
 
 def grader_task2(action: MotorcycleAction) -> float:
     """Task 2: Brake hard when hazard is close."""
     if action.brake > 0.7 and action.throttle < 0.1:
-        return 1.0
-    return 0.0
+        return 0.9
+    return 0.3
 
 def grader_task3(action: MotorcycleAction) -> float:
     """Task 3: Maintain speed while leaning slightly right."""
     if 0.4 < action.throttle < 0.8 and 0.0 < action.steering < 0.5:
-        return 1.0
-    return 0.0
+        return 0.7
+    return 0.4
 
 ALL_TASKS: List[Dict[str, Any]] = [
     {

@@ -1,7 +1,8 @@
 # server/motorcycle_environment.py
 
 from uuid import uuid4
-from typing import Optional
+from typing import Optional, List, Dict, Any
+
 from openenv.core.env_server.interfaces import Environment
 from models import MotorcycleAction, MotorcycleObservation, MotorcycleState
 from .tasks import ALL_TASKS
@@ -17,10 +18,7 @@ class MotorcycleEnvironment(Environment[MotorcycleAction, MotorcycleObservation,
         self._tasks = ALL_TASKS
 
     def get_tasks(self) -> List[Dict[str, Any]]:
-        """
-        REQUIRED by OpenEnv validator.
-        Returns the list of task dictionaries, each containing a 'grader' callable.
-        """
+        """REQUIRED: Returns list of tasks with graders."""
         return self._tasks
 
     def reset(self, seed: Optional[int] = None, episode_id: Optional[str] = None, **kwargs):

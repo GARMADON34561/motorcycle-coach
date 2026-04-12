@@ -1,7 +1,7 @@
 from uuid import uuid4
 from typing import Optional
 from openenv.core.env_server.interfaces import Environment
-from ..models import MotorcycleAction, MotorcycleObservation, MotorcycleState
+from models import MotorcycleAction, MotorcycleObservation, MotorcycleState   # absolute import
 from .tasks import ALL_TASKS
 
 class MotorcycleEnvironment(Environment[MotorcycleAction, MotorcycleObservation, MotorcycleState]):
@@ -20,13 +20,11 @@ class MotorcycleEnvironment(Environment[MotorcycleAction, MotorcycleObservation,
 
         # --- scoring logic (0.0 to 1.0) ---
         opt = task["optimal_action"]
-        # throttle and brake: lower difference = higher reward
         throttle_diff = abs(action.throttle - opt["throttle"])
         brake_diff = abs(action.brake - opt["brake"])
-        lean_diff = abs(action.lean_angle - opt["lean_angle"]) / 30.0  # normalise
+        lean_diff = abs(action.lean_angle - opt["lean_angle"]) / 30.0
         steer_diff = abs(action.steering - opt["steering"])
 
-        # weight: throttle/brake most important, then lean, then steering
         score = 1.0 - (0.4 * throttle_diff + 0.3 * brake_diff + 0.2 * min(lean_diff, 1.0) + 0.1 * min(steer_diff, 1.0))
         reward = max(0.0, min(1.0, score))
 
@@ -41,7 +39,6 @@ class MotorcycleEnvironment(Environment[MotorcycleAction, MotorcycleObservation,
 
     def _get_observation(self, reward=0.0, done=False):
         if self._state.current_task_index >= len(self.tasks):
-            # terminal observation
             return MotorcycleObservation(
                 speed=0, lean_angle=0, hazard_distance=0, hazard_type="none",
                 time_to_collision=0, done=done, reward=self._state.total_reward / len(self.tasks)

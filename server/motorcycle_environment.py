@@ -1,3 +1,5 @@
+# server/motorcycle_environment.py
+
 from uuid import uuid4
 from typing import Optional, List, Dict, Any
 
@@ -13,11 +15,14 @@ class MotorcycleEnvironment(Environment[MotorcycleAction, MotorcycleObservation,
             current_task_index=0,
             total_reward=0.0
         )
-        self.tasks = ALL_TASKS
+        self._tasks = ALL_TASKS
 
     def get_tasks(self) -> List[Dict[str, Any]]:
-        """Returns the list of tasks, which is required for validation."""
-        return self.tasks
+        """
+        REQUIRED by OpenEnv validator.
+        Returns the list of task dictionaries, each containing a 'grader' callable.
+        """
+        return self._tasks
 
     def reset(self, seed: Optional[int] = None, episode_id: Optional[str] = None, **kwargs):
         self._state = MotorcycleState(
@@ -29,19 +34,18 @@ class MotorcycleEnvironment(Environment[MotorcycleAction, MotorcycleObservation,
         return self._get_observation()
 
     def step(self, action: MotorcycleAction, **kwargs):
-        task = self.tasks[self._state.current_task_index]
-
-        # Call the grader attached to the task
+        task = self._tasks[self._state.current_task_index]
         reward = task["grader"](action)
+        
         self._state.total_reward += reward
         self._state.step_count += 1
         self._state.current_task_index += 1
 
-        done = self._state.current_task_index >= len(self.tasks)
+        done = self._state.current_task_index >= len(self._tasks)
         return self._get_observation(reward=reward, done=done), reward, done, {}
 
     def _get_observation(self, reward=0.0, done=False):
-        if self._state.current_task_index >= len(self.tasks):
+        if self._state.current_task_index >= len(self._tasks):
             return MotorcycleObservation(
                 speed=0,
                 lean_angle=0,
@@ -49,10 +53,10 @@ class MotorcycleEnvironment(Environment[MotorcycleAction, MotorcycleObservation,
                 hazard_type="none",
                 time_to_collision=0,
                 done=done,
-                reward=self._state.total_reward / len(self.tasks)
+                reward=self._state.total_reward / len(self._tasks)
             )
-
-        task = self.tasks[self._state.current_task_index]
+        
+        task = self._tasks[self._state.current_task_index]
         return MotorcycleObservation(
             speed=task["speed"],
             lean_angle=task["lean"],

@@ -2,41 +2,50 @@
 import sys
 from openai import OpenAI
 
-# Required environment variables with defaults
-API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4.1-mini")
-HF_TOKEN = os.getenv("HF_TOKEN")
+API_BASE_URL = os.environ.get("API_BASE_URL", "https://api.openai.com/v1")
+API_KEY = os.environ.get("API_KEY")
+MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4.1-mini")
 
-# Initialize client only if token is present; otherwise leave as None
-client = None
-if HF_TOKEN:
-    try:
-        client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
-    except Exception:
-        client = None  # fail silently, use mock fallback
+if not API_KEY:
+    print("[START] task=motorcycle-coach env=motorcycle model=fallback")
+    print("[STEP] step=1 action=mock_action reward=0.00 done=true error=API_KEY missing")
+    print("[END] success=false steps=1 rewards=0.00")
+    sys.exit(0)
+
+try:
+    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+except Exception as e:
+    print(f"[START] task=motorcycle-coach env=motorcycle model={MODEL_NAME}")
+    print(f"[STEP] step=1 action=init_error reward=0.00 done=true error={str(e)}")
+    print("[END] success=false steps=1 rewards=0.00")
+    sys.exit(0)
 
 def run_inference(prompt: str) -> str:
-    """Mockable inference – returns a placeholder if API is unavailable."""
-    if client is None:
-        return "[MOCK] This is a fallback response because HF_TOKEN is missing or invalid."
     try:
         response = client.chat.completions.create(
             model=MODEL_NAME,
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=50
         )
         return response.choices[0].message.content
     except Exception as e:
-        return f"[MOCK] API call failed: {e}"
+        return f"[ERROR] {e}"
 
 if __name__ == "__main__":
-    # The validator expects the script to output these lines without crashing.
     task_name = "motorcycle-coach"
     env_name = "motorcycle"
     model_name = MODEL_NAME
 
     print(f"[START] task={task_name} env={env_name} model={model_name}")
 
-    # Simulated steps – adjust as you like, but keep at least one.
+    prompt = "You are a motorcycle coach. Suggest a safe action for the rider."
+    result = run_inference(prompt)
+
+    if result.startswith("[ERROR]"):
+        print(f"[STEP] step=1 action=api_call_failed reward=0.00 done=true error={result}")
+        print("[END] success=false steps=1 rewards=0.00")
+        sys.exit(0)
+
     simulated_steps = [
         {"action": "steer_left", "reward": 0.0, "done": False, "error": None},
         {"action": "brake_hard", "reward": 0.0, "done": False, "error": None},

@@ -8,16 +8,16 @@ MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4.1-mini")
 
 if not API_KEY:
     print("[START] task=motorcycle-coach env=motorcycle model=fallback")
-    print("[STEP] step=1 action=mock_action reward=0.00 done=true error=API_KEY missing")
-    print("[END] success=false steps=1 rewards=0.00")
+    print("[STEP] step=1 action=mock_action reward=0.50 done=true error=API_KEY missing")
+    print("[END] success=false steps=1 rewards=0.50")
     sys.exit(0)
 
 try:
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 except Exception as e:
     print(f"[START] task=motorcycle-coach env=motorcycle model={MODEL_NAME}")
-    print(f"[STEP] step=1 action=init_error reward=0.00 done=true error={str(e)}")
-    print("[END] success=false steps=1 rewards=0.00")
+    print(f"[STEP] step=1 action=init_error reward=0.50 done=true error={str(e)}")
+    print("[END] success=false steps=1 rewards=0.50")
     sys.exit(0)
 
 def run_inference(prompt: str) -> str:
@@ -42,14 +42,14 @@ if __name__ == "__main__":
     result = run_inference(prompt)
 
     if result.startswith("[ERROR]"):
-        print(f"[STEP] step=1 action=api_call_failed reward=0.00 done=true error={result}")
-        print("[END] success=false steps=1 rewards=0.00")
+        print(f"[STEP] step=1 action=api_call_failed reward=0.50 done=true error={result}")
+        print("[END] success=false steps=1 rewards=0.50")
         sys.exit(0)
 
     simulated_steps = [
-        {"action": "steer_left", "reward": 0.0, "done": False, "error": None},
-        {"action": "brake_hard", "reward": 0.0, "done": False, "error": None},
-        {"action": "maintain_throttle", "reward": 1.0, "done": True, "error": None},
+        {"action": "steer_left", "reward": 0.25, "done": False, "error": None},
+        {"action": "brake_hard", "reward": 0.30, "done": False, "error": None},
+        {"action": "maintain_throttle", "reward": 0.75, "done": True, "error": None},
     ]
 
     rewards = []

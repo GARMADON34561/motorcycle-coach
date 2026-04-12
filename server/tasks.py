@@ -2,19 +2,22 @@
 from models import MotorcycleAction
 
 def grader_task1(action: MotorcycleAction) -> float:
-    if action.steering < 0 and action.throttle > 0.2:
-        return 0.75
-    return 0.25
+    steering_score = max(0.0, min(1.0, -action.steering))
+    throttle_score = max(0.0, min(1.0, action.throttle))
+    raw_reward = 0.4 * steering_score + 0.3 * throttle_score + 0.3
+    return round(max(0.01, min(0.99, raw_reward)), 4)
 
 def grader_task2(action: MotorcycleAction) -> float:
-    if action.brake > 0.7 and action.throttle < 0.1:
-        return 0.8
-    return 0.3
+    brake_score = max(0.0, min(1.0, action.brake))
+    throttle_penalty = 1.0 - max(0.0, min(1.0, action.throttle))
+    raw_reward = 0.6 * brake_score + 0.3 * throttle_penalty + 0.1
+    return round(max(0.01, min(0.99, raw_reward)), 4)
 
 def grader_task3(action: MotorcycleAction) -> float:
-    if 0.4 < action.throttle < 0.8 and 0.0 < action.steering < 0.5:
-        return 0.7
-    return 0.35
+    throttle_score = 1.0 - abs(action.throttle - 0.6)
+    steering_score = 1.0 - abs(action.steering - 0.2)
+    raw_reward = 0.5 * throttle_score + 0.4 * steering_score + 0.1
+    return round(max(0.01, min(0.99, raw_reward)), 4)
 
 ALL_TASKS: List[Dict[str, Any]] = [
     {
@@ -24,7 +27,9 @@ ALL_TASKS: List[Dict[str, Any]] = [
         "lean": 0.0,
         "hazard_distance": 15.0,
         "hazard_type": "static",
-        "grader": grader_task1
+        "grader": grader_task1,
+        "min_score": 0.01,
+        "max_score": 0.99,
     },
     {
         "name": "emergency_braking",
@@ -33,7 +38,9 @@ ALL_TASKS: List[Dict[str, Any]] = [
         "lean": 0.0,
         "hazard_distance": 5.0,
         "hazard_type": "sudden",
-        "grader": grader_task2
+        "grader": grader_task2,
+        "min_score": 0.01,
+        "max_score": 0.99,
     },
     {
         "name": "cornering",
@@ -42,6 +49,8 @@ ALL_TASKS: List[Dict[str, Any]] = [
         "lean": 5.0,
         "hazard_distance": 100.0,
         "hazard_type": "none",
-        "grader": grader_task3
-    }
+        "grader": grader_task3,
+        "min_score": 0.01,
+        "max_score": 0.99,
+    },
 ]
